@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const app_code: string | undefined = headers?.['x-app-code'] as string | undefined;
     if (!app_id || !app_code) return onApiError(req, res, { code: 400, message: 'app_id and app_code not found' });
 
-    const app = await viewSupabase('app', app_id);
+    const app = await viewSupabase('adm_app', app_id);
     if (app?.data?.id !== app_id || app?.data?.code !== app_code)
       return onApiError(req, res, { code: 400, message: 'app_id and app_code not found' });
 
@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const last_name: string = body?.data?.last_name ?? '';
       if (!id || !email) return onApiError(req, res, { code: 400, message: 'id & email is required' });
 
-      const response = await setSupabase('user', id, {
+      const response = await setSupabase('adm_user', id, {
         id,
         app_id,
         app_code,
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const id: string = body?.data?.id ?? '';
       if (!id) return onApiError(req, res, { code: 400, message: 'id is required' });
 
-      const response = await deleteSupabase('user', id);
+      const response = await deleteSupabase('adm_user', id);
       return onApiSuccess(req, res, response);
     }
   } catch (error) {

@@ -44,7 +44,17 @@ export const setSchema = z.object({
   row: z.unknown(),
 });
 
+export const setBatchSchema = z.object({
+  tableId: z.string(),
+  rows: z.array(z.record(z.unknown()).refine((record) => 'id' in record)).nonempty(),
+});
+
 export const deleteSchema = z.object({
   tableId: z.string(),
-  id: z.string(),
+  id: z.union([z.string(), z.number()]),
+});
+
+export const deleteBatchSchema = z.object({
+  tableId: z.string(),
+  ids: z.array(z.union([z.string(), z.number()])).nonempty(),
 });

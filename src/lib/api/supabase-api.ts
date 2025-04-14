@@ -4,7 +4,7 @@ import { PostgrestError } from '@supabase/supabase-js';
 import { formatISO } from 'date-fns';
 import { NextApiRequest } from 'next';
 
-export const authSupabase = async (req: NextApiRequest): Promise<SupabaseResponse<TableRow<'organization'>>> => {
+export const authSupabase = async (req: NextApiRequest): Promise<SupabaseResponse<TableRow<'adm_organization'>>> => {
   try {
     const method = req.method ?? '';
     const tableId: string = (req?.query?.tableId ?? '') as string;
@@ -49,7 +49,7 @@ export const authSupabase = async (req: NextApiRequest): Promise<SupabaseRespons
         },
       };
 
-    const query = supabaseClient.from('organization').select().eq('app_id', appId).eq('app_code', appCode).eq('id', orgId).single();
+    const query = supabaseClient.from('adm_organization').select().eq('app_id', appId).eq('app_code', appCode).eq('id', orgId).single();
     const { data, error } = await query;
     if (!data)
       return {
@@ -136,13 +136,13 @@ export const setSupabase = async <T extends TableId>(tableId: T, id: any, row: T
     const { created_at, updated_at, ...cleanRow } = row;
     const timestamp = formatISO(new Date());
 
-    const { data: existingData } = await supabaseClient.from(tableId).select('id').eq('id', id).single();
+    const { data: existingRow } = await supabaseClient.from(tableId).select('id').eq('id', id).single();
     const setRow: TableInsert<T> = {
       ...cleanRow,
       id,
       updated_at: timestamp,
-      created_at: existingData ? undefined : timestamp,
     } as TableInsert<T>;
+    if (!existingRow) setRow.created_at = timestamp;
     const { data, error } = await supabaseClient.from(tableId).upsert(setRow).select().single();
 
     return { data: data as TableRow<T> | null, error };
@@ -151,23 +151,43 @@ export const setSupabase = async <T extends TableId>(tableId: T, id: any, row: T
   }
 };
 
-export const setBatchSupabase = async <T extends TableId>(tableId: T, rows: TableInsert<T>[]): Promise<SupabaseResponse<TableRow<T>[]>> => {
+export const setBatchSupabase = async <T extends TableId>(
+  tableId: T,
+  rows: TableInsert<T>[],
+  staticColumn: Record<string, any> = {}
+): Promise<SupabaseResponse<TableRow<T>[]>> => {
   try {
     const timestamp = formatISO(new Date());
 
     const ids = rows.map((row) => row.id);
-    const { data: existingData } = await supabaseClient.from(tableId).select('id').in('id', ids);
+    const staticKeys = Object.keys(staticColumn);
+    const { data: existingRows } = (await supabaseClient
+      .from(tableId)
+      .select(['id', ...staticKeys].join(', '))
+      .in('id', ids)) as { data: TableInsert<T>[] };
 
-    const existingIds = new Set((existingData as TableInsert<T>[])?.map((row) => row.id));
-
-    const setRows: TableInsert<T>[] = rows.map(({ id, row }) => {
-      const { created_at, updated_at, ...cleanRow } = row;
+    if (existingRows.some((row) => staticKeys.some((k) => row?.[k] !== staticColumn[k])))
       return {
+        data: null,
+        error: {
+          code: '400',
+          name: 'Bad Request',
+          message: `Row contains invalid ${staticKeys.join(', ')}`,
+          details: 'Static column cannot be changed',
+          hint: "Check your rows' static keys",
+        } as PostgrestError,
+      };
+    const existingIds = new Set(existingRows?.map((row) => row.id));
+
+    const setRows: TableInsert<T>[] = rows.map(({ id, ...row }) => {
+      const { created_at, updated_at, ...cleanRow } = row;
+      const setRow: TableInsert<T> = {
         ...cleanRow,
         id,
         updated_at: timestamp,
-        created_at: existingIds.has(id) ? undefined : timestamp,
       } as TableInsert<T>;
+      if (!existingIds.has(id)) setRow.created_at = timestamp;
+      return setRow;
     });
 
     const { data, error } = await supabaseClient.from(tableId).upsert(setRows).select();
@@ -187,11 +207,33 @@ export const deleteSupabase = async <T extends TableId>(tableId: T, id: any): Pr
   }
 };
 
-export const deleteBatchSupabase = async <T extends TableId>(tableId: T, ids: any[]): Promise<SupabaseResponse<{ id: any }[]>> => {
+export const deleteBatchSupabase = async <T extends TableId>(
+  tableId: T,
+  ids: (string | number)[],
+  staticColumn: Record<string, any> = {}
+): Promise<SupabaseResponse<{ id: string | number }[]>> => {
   try {
-    const { data, error } = await supabaseClient.from(tableId).delete().in('id', ids).select('id');
+    const staticKeys = Object.keys(staticColumn);
+    if (staticKeys.length) {
+      const { data: existingRows } = (await supabaseClient
+        .from(tableId)
+        .select(['id', ...staticKeys].join(', '))
+        .in('id', ids)) as { data: TableInsert<T>[] };
+      if (existingRows.some((row) => staticKeys.some((k) => row?.[k] !== staticColumn[k])))
+        return {
+          data: null,
+          error: {
+            code: '400',
+            name: 'Bad Request',
+            message: `Row contains invalid ${staticKeys.join(', ')}`,
+            details: 'Static column should match',
+            hint: "Check your rows' static keys",
+          } as PostgrestError,
+        };
+    }
 
-    return { data: data as { id: any }[] | null, error };
+    const { data, error } = await supabaseClient.from(tableId).delete().in('id', ids).select('id');
+    return { data: data as { id: string | number }[] | null, error };
   } catch (error) {
     return { data: null, error: error as PostgrestError };
   }

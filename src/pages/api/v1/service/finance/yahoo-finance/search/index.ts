@@ -4,13 +4,11 @@ import axios from 'axios';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log('triggered nying');
   if (req.method !== 'GET') return onApiError(req, res, 'Request method not allowed');
   const query = req.query;
 
   try {
     const { q = '' } = query;
-    console.log('q', q);
 
     const result = await axios.get('https://query1.finance.yahoo.com/v1/finance/search', { params: { q } });
 

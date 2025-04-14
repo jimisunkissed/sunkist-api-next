@@ -1,11 +1,17 @@
-import { addBatchSupabase, addSupabase, authSupabase, viewBatchSupabase } from '@/lib/api/supabase-api';
+import { addBatchSupabase, addSupabase, authSupabase, deleteBatchSupabase, setBatchSupabase, viewBatchSupabase } from '@/lib/api/supabase-api';
 import { apiDecodeArray, apiDecodeObject, apiParseNumber, onApiError, onApiSuccess } from '@/lib/util/server/api-util';
 import { ProtectedTableId, TableFilter, TableInsert, TableSort } from '@/schema/lib/api/supabase-api-schema';
-import { addBatchSchema, addSchema, viewBatchSchema } from '@/schema/lib/pages/api/v1/service/supabase/supabase-public-schema';
+import {
+  addBatchSchema,
+  addSchema,
+  deleteBatchSchema,
+  setBatchSchema,
+  viewBatchSchema,
+} from '@/schema/lib/pages/api/v1/service/supabase/supabase-public-schema';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const allowedMethods = ['GET', 'POST'];
+  const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE'];
   const method = req.method;
   if (!method || !allowedMethods.includes(method)) return onApiError(req, res, { code: 400, message: 'Request method not allowed' });
 
@@ -67,6 +73,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         return onApiSuccess(req, res, data);
       }
+    } else if (method === 'PUT') {
+      const rows = req.body.rows as TableInsert<ProtectedTableId>[];
+
+      const validation = setBatchSchema.safeParse({ tableId, rows });
+      if (!validation.success) return onApiError(req, res, { code: 400, message: validation.error.issues });
+      if (rows.length > 500) return onApiError(req, res, { code: 400, message: 'Batch size exceeds 500 rows' });
+
+      const { data, error } = await setBatchSupabase(tableId, rows, { organization_id });
+      if (error) return onApiError(req, res, error);
+
+      return onApiSuccess(req, res, data);
+    } else if (method === 'DELETE') {
+      const ids = req.body.ids as (string | number)[];
+
+      const validation = deleteBatchSchema.safeParse({ tableId, ids });
+      if (!validation.success) return onApiError(req, res, { code: 400, message: validation.error.issues });
+      if (ids.length > 500) return onApiError(req, res, { code: 400, message: 'Batch size exceeds 500 rows' });
+
+      const { data, error } = await deleteBatchSupabase(tableId, ids, { organization_id });
+      if (error) return onApiError(req, res, error);
+
+      return onApiSuccess(req, res, data);
     }
   } catch (error) {
     return onApiError(req, res, { code: 500, message: error instanceof Error ? error.message : 'An unknown error occurred' });

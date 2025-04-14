@@ -5,14 +5,13 @@ import { NextApiRequest, NextApiResponse } from 'next';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const headers = req.headers;
   const body = req.body;
-  console.log({ headers, body });
 
   try {
     const app_id: string | undefined = headers?.['x-app-id'] as string | undefined;
     const app_code: string | undefined = headers?.['x-app-code'] as string | undefined;
     if (!app_id || !app_code) return onApiError(req, res, { code: 400, message: 'app_id and app_code not found' });
 
-    const app = await viewSupabase('app', app_id);
+    const app = await viewSupabase('adm_app', app_id);
     if (app?.data?.id !== app_id || app?.data?.code !== app_code)
       return onApiError(req, res, { code: 400, message: 'app_id and app_code not found' });
 
@@ -26,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const slug: string = body?.data?.slug ?? '';
       if (!id || !name || !slug) return onApiError(req, res, { code: 400, message: 'id, name & slug is required' });
 
-      const response = await setSupabase('organization', id, {
+      const response = await setSupabase('adm_organization', id, {
         app_id,
         app_code,
         is_production: process.env.NODE_ENV === 'production' ? true : false,
@@ -38,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const id: string = body?.data?.id ?? '';
       if (!id) return onApiError(req, res, { code: 400, message: 'id is required' });
 
-      const response = await deleteSupabase('organization', id);
+      const response = await deleteSupabase('adm_organization', id);
       return onApiSuccess(req, res, response);
     }
   } catch (error) {

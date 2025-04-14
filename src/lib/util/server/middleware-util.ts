@@ -1,4 +1,4 @@
-export const decodeJWT = (token: string): any => {
+export const decodeToken = (token: string): any => {
   try {
     const [, payloadBase64] = token.split('.');
     const decodedPayload = Buffer.from(payloadBase64, 'base64').toString();

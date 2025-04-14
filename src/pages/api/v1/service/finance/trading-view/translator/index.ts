@@ -40,9 +40,7 @@ const fetchTradingView = async (from: string, date: string, type: string) => {
       const split = message.split('~m~')?.[2];
       if (!!message && !split.startsWith('~h~')) {
         const parsed = JSON.parse(split);
-        console.log('parsed', parsed);
         const v = parsed?.p?.[1]?.v;
-        if (!!v) console.log('v', v);
         messageCount++;
 
         // if (messageCount >= requiredMessages || timeout) {

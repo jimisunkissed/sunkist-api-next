@@ -1,7 +1,7 @@
 import { createRouteMatcher } from '@clerk/nextjs/server';
 import { errorMessage } from '@/lib/util/general/string-util';
 import { NextRequest, NextResponse } from 'next/server';
-import { decodeJWT } from '@/lib/util/server/middleware-util';
+import { decodeToken } from '@/lib/util/server/middleware-util';
 
 const allowedOrigins: string[] = ['https://studio.sunkist.cloud'];
 const protectedRoutes = createRouteMatcher(['/api/v1(.*)']);
@@ -28,7 +28,7 @@ export default function middleware(req: NextRequest) {
       const authHeader: string | null = req.headers.get('Authorization');
       if (!authHeader) throw new Error('Unauthorized access');
 
-      const decoded = decodeJWT(authHeader);
+      const decoded = decodeToken(authHeader);
       response.headers.set('x-org-id', decoded?.org_id);
       response.headers.set('x-org-role', decoded?.org_role);
     }
