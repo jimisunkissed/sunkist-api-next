@@ -161,10 +161,13 @@ export const setBatchSupabase = async <T extends TableId>(
 
     const ids = rows.map((row) => row.id);
     const staticKeys = Object.keys(staticColumn);
-    const { data: existingRows } = (await supabaseClient
+    const { data: existingRows } = await supabaseClient
       .from(tableId)
       .select(['id', ...staticKeys].join(', '))
-      .in('id', ids)) as { data: TableInsert<T>[] };
+      .in('id', ids)
+      .then((result) => {
+        return { data: result.data as TableInsert<T>[] };
+      });
 
     if (existingRows.some((row) => staticKeys.some((k) => row?.[k] !== staticColumn[k])))
       return {
@@ -209,16 +212,20 @@ export const deleteSupabase = async <T extends TableId>(tableId: T, id: any): Pr
 
 export const deleteBatchSupabase = async <T extends TableId>(
   tableId: T,
-  ids: (string | number)[],
+  ids: any[],
   staticColumn: Record<string, any> = {}
-): Promise<SupabaseResponse<{ id: string | number }[]>> => {
+): Promise<SupabaseResponse<{ ids: any }[]>> => {
   try {
     const staticKeys = Object.keys(staticColumn);
     if (staticKeys.length) {
-      const { data: existingRows } = (await supabaseClient
+      const { data: existingRows } = await supabaseClient
         .from(tableId)
         .select(['id', ...staticKeys].join(', '))
-        .in('id', ids)) as { data: TableInsert<T>[] };
+        .in('id', ids)
+        .then((result) => {
+          return { data: result.data as TableInsert<T>[] };
+        });
+
       if (existingRows.some((row) => staticKeys.some((k) => row?.[k] !== staticColumn[k])))
         return {
           data: null,
@@ -233,7 +240,7 @@ export const deleteBatchSupabase = async <T extends TableId>(
     }
 
     const { data, error } = await supabaseClient.from(tableId).delete().in('id', ids).select('id');
-    return { data: data as { id: string | number }[] | null, error };
+    return { data: data as { ids: any }[] | null, error };
   } catch (error) {
     return { data: null, error: error as PostgrestError };
   }

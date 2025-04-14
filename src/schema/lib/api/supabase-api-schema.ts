@@ -8,7 +8,6 @@ export type ProtectedTableId = {
   [K in TableId]: K extends `st${string}` ? K : never;
 }[TableId];
 
-export const TABLE_NAME = ['app'] as const satisfies TableId[];
 export type TableRow<T extends TableId> = Tables[T]['Row'];
 export type TableInsert<T extends TableId> = Tables[T] extends { Insert: any } ? Tables[T]['Insert'] : never;
 export type TableUpdate<T extends TableId> = Tables[T]['Update'];

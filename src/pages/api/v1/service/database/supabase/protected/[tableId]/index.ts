@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return onApiSuccess(req, res, data);
     } else if (method === 'DELETE') {
-      const ids = req.body.ids as (string | number)[];
+      const ids = req.body.ids as any[];
 
       const validation = deleteBatchSchema.safeParse({ tableId, ids });
       if (!validation.success) return onApiError(req, res, { code: 400, message: validation.error.issues });
