@@ -3,7 +3,7 @@ import { errorMessage } from '@/lib/util/general/string-util';
 import { NextRequest, NextResponse } from 'next/server';
 import { decodeToken } from '@/lib/util/server/middleware-util';
 
-const allowedOrigins: string[] = ['https://studio.sunkist.cloud'];
+const allowedOrigins: string[] = ['https://sunkist-studio-next.vercel.app'];
 const protectedRoutes = createRouteMatcher(['/api/v1(.*)']);
 
 export default function middleware(req: NextRequest) {
